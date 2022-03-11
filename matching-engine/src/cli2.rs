@@ -1,21 +1,26 @@
 use std::env;
 use std::io;
 
-mod engine;
-use engine::{MatchingEngine, OrderResult, OrderType};
+use order_protobuf::order_service_client::OrderServiceClient;
+use order_protobuf::{OrderRequest, OrderResponse, OrderType};
 
-fn main() {
+pub mod order_protobuf {
+    tonic::include_proto!("order_protobuf");
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
         println!("It is missing the asset code from your command.");
-        return;
+        return Ok(());
     }
 
     let asset: &String = &args[1];
 
     println!("\n\n*** Starting matching engine for {} ***\n\n", asset);
-    let mut engine = MatchingEngine::new(asset.to_string());
+    let mut client = OrderServiceClient::connect("http://[::1]:3050").await?;
 
     loop {
         println!("Enter your order command in the format: BUY|SELL QTY PRICE\n");
@@ -40,23 +45,26 @@ fn main() {
         let order_type: String = args[0].trim().to_uppercase();
         let qty: u64 = args[1].trim().parse().expect("Invalid quantity");
         let price: f32 = args[2].trim().parse().expect("Invalid price");
-        let mut order_type_enum: OrderType = OrderType::Buy;
+        let mut order_type_enum: i32 = 0;
 
         if order_type == "SELL" {
-            order_type_enum = OrderType::Sell;
+            order_type_enum = 1;
         } else if order_type != "BUY" {
             println!("Invalid order type: {:?}", order_type);
             continue;
         }
 
-        let results: Vec<OrderResult> = engine.add_order(order_type_enum, qty, price);
+        let request = tonic::Request::new(OrderRequest {
+            asset_code: asset.into(),
+            order_type: order_type_enum,
+            quantity: qty,
+            price,
+        });
 
-        for result in results {
-            println!(
-                "Order {:?} => {:?} x {:?}",
-                result.result_type, result.quantity, result.price
-            );
-        }
-        println!();
+        let response = client.send_order(request).await?;
+
+        println!("RESPONSE={:?}", response);
     }
+
+    Ok(())
 }

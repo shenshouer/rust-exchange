@@ -1,9 +1,9 @@
 use std::env;
-use tonic::{transport::Server, Request, Response, Status};
 use std::sync::{Arc, Mutex};
+use tonic::{transport::Server, Request, Response, Status};
 
 mod engine;
-use engine::{MatchingEngine, OrderType, OrderResult};
+use engine::{MatchingEngine, OrderResult, OrderType};
 
 use order_protobuf::order_service_server::{OrderService, OrderServiceServer};
 use order_protobuf::{OrderRequest, OrderResponse};
@@ -14,7 +14,7 @@ pub mod order_protobuf {
 
 #[derive(Debug)]
 pub struct MatchingEngineOrderService {
-    matching_engine: Arc<Mutex<MatchingEngine>>
+    matching_engine: Arc<Mutex<MatchingEngine>>,
 }
 
 #[tonic::async_trait]
@@ -23,17 +23,16 @@ impl OrderService for MatchingEngineOrderService {
         &self,
         request: Request<OrderRequest>,
     ) -> Result<Response<OrderResponse>, Status> {
-
         let order_info = request.into_inner();
-        let asset_code: String = String::from(order_info.asset_code);
+        // let asset_code: String = String::from(order_info.asset_code);
         let order_type: i32 = order_info.order_type;
         let qty: u64 = order_info.quantity;
         let price: f32 = order_info.price;
 
-        let mut order_type_enum: OrderType = OrderType::BUY;
+        let mut order_type_enum: OrderType = OrderType::Buy;
 
         if order_type == 1 {
-            order_type_enum = OrderType::SELL;
+            order_type_enum = OrderType::Sell;
         } else if order_type != 0 {
             let response = order_protobuf::OrderResponse {
                 ok: false,
@@ -45,7 +44,10 @@ impl OrderService for MatchingEngineOrderService {
         let mut engine = self.matching_engine.lock().unwrap();
         let results: Vec<OrderResult> = engine.add_order(order_type_enum, qty, price);
         for result in results {
-            println!("Order {:?} {:?} => {:?} x {:?}", result.result_type, result.order_type, result.quantity, result.price);
+            println!(
+                "Order {:?} {:?} => {:?} x {:?}",
+                result.result_type, result.order_type, result.quantity, result.price
+            );
         }
 
         let response = order_protobuf::OrderResponse {
@@ -67,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         println!("\n\n*** Starting matching engine for {} ***\n\n", asset);
 
-        let mut engine = MatchingEngine::new(asset.to_string());
+        let engine = MatchingEngine::new(asset.to_string());
         let mutex_engine = Arc::new(Mutex::new(engine));
 
         let order_service = MatchingEngineOrderService {
@@ -78,7 +80,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_service(OrderServiceServer::new(order_service))
             .serve(addr)
             .await?;
-
     } else {
         println!("You need to inform the asset code to accept orders.");
     }

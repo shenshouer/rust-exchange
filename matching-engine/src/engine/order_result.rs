@@ -1,12 +1,12 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum OrderResultType {
-    QUEUED,
-    EXECUTED,
+    Queued,
+    Executed,
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum OrderType {
-    BUY,
-    SELL,
+    Buy,
+    Sell,
 }
 #[derive(Debug)]
 pub struct OrderResult {
@@ -17,7 +17,12 @@ pub struct OrderResult {
 }
 
 impl OrderResult {
-    pub fn new(result_type: OrderResultType, order_type: OrderType, quantity: u64, price: f32) -> OrderResult {
+    pub fn new(
+        result_type: OrderResultType,
+        order_type: OrderType,
+        quantity: u64,
+        price: f32,
+    ) -> OrderResult {
         OrderResult {
             result_type,
             order_type,

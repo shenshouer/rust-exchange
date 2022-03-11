@@ -19,6 +19,12 @@ test = false
 bench = false
 
 [[bin]]
+path = "src/cli2.rs"
+name = "matching-engine-cli2"
+test = false
+bench = false
+
+[[bin]]
 path = "src/server.rs"
 name = "matching-engine-server"
 test = false
